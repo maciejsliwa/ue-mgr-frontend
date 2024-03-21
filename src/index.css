@@ -1,13 +1,73 @@
+/* App.css */
+
 body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  background-color: #121212;
+  color: #b3b3b3;
+  font-family: 'Circular Std', sans-serif;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+.App {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 50px;
+}
+
+h1 {
+  color: #1db954;
+  font-size: 2.5em;
+  margin-bottom: 20px;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 50px;
+}
+
+.calendar-header h2 {
+  color: #ffffff;
+}
+
+.Button {
+  background-color: #1db954;
+  color: #ffffff;
+  font-size: 1em;
+  padding: 10px 20px;
+  border-radius: 500px;
+  text-transform: none;
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  border-radius: 4px;
+  background-color: #282828;
+  color: #b3b3b3;
+}
+
+.day.inactive {
+  background-color: #121212;
+  color: #535353;
+}
+
+.day-number {
+  font-size: 1.2em;
+  margin-bottom: 10px;
+}
+
+.emoticon {
+  font-size: 2em;
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format, addMonths, subMonths } from 'date-fns';
 import { Button, ThemeProvider, createTheme } from '@mui/material';
+import { SpotifyAuth, Scopes } from 'react-spotify-auth';
 import './App.css';
 
 const generateEmoticons = () => {
@@ -33,17 +34,6 @@ const App = () => {
   const [dateRange, setDateRange] = useState({ min: '', max: '' });
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('http://127.0.0.1:8000/calender/range');
-        const data = await response.json();
-        setDateRange(data);
-      } catch (error) {
-        console.error('Error fetching data from API:', error);
-      }
-    };
-
-    fetchData();
   }, []);
 
   useEffect(() => {
@@ -82,9 +72,41 @@ const App = () => {
     setCurrentMonth(subMonths(currentMonth, 1));
   };
 
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/uploadFiles', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      setDateRange(data);
+
+      if (!response.ok) {
+        throw new Error('Error uploading file');
+      }
+
+      alert('File uploaded successfully');
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error uploading file');
+    }
+  };
+
   return (
       <ThemeProvider theme={darkTheme}>
         <div className="App">
+          <SpotifyAuth
+              redirectUri='http://localhost:3000/'
+              clientID='7c15d9c165cc44cca6bbb29f3d5657fe'
+              scopes={[Scopes.userReadPrivate, 'user-read-email']} // pass the scopes you need
+              btnClassName='btn btn-success btn-block'
+              btnContent='Zaloguj przez Spotify'
+          />
+          <input type="file" onChange={handleFileUpload}/>
           <h1>Interaktywny Kalendarz z Emotikonami</h1>
           <div className="calendar-header">
             <Button onClick={handlePrevMonth} variant="contained">
@@ -95,7 +117,7 @@ const App = () => {
               Następny Miesiąc &gt;
             </Button>
           </div>
-          <Calendar days={calendarData} />
+          <Calendar days={calendarData}/>
         </div>
       </ThemeProvider>
   );

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { format, addMonths, subMonths } from 'date-fns';
 import { Button, ThemeProvider, createTheme } from '@mui/material';
-import { SpotifyAuth, Scopes } from 'react-spotify-auth';
+import { SpotifyAuth, Scopes} from 'react-spotify-auth';
+import axios from 'axios';
 import './App.css';
 
 const generateEmoticons = () => {
@@ -32,9 +33,28 @@ const App = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarData, setCalendarData] = useState([]);
   const [dateRange, setDateRange] = useState({ min: '', max: '' });
+  const [token, setToken] = useState(null);
+  const [recentTrack, setRecentTrack] = useState(null);
 
   useEffect(() => {
+    const spotifyToken = localStorage.getItem('spotifyAuthToken');
+    if (spotifyToken) {
+      setToken(spotifyToken);
+    }
   }, []);
+
+  useEffect(() => {
+    if (token) {
+      // Przekazanie tokena do serwera FastAPI
+      axios.post('http://localhost:8000/spt/last', { token })
+          .then(res => {
+            if (res.recently_played) {
+              setRecentTrack(res.recently_played);
+            }
+          })
+          .catch(err => console.error(err));
+    }
+  }, [token]);
 
   useEffect(() => {
     const generateCalendarData = () => {
@@ -102,10 +122,11 @@ const App = () => {
           <SpotifyAuth
               redirectUri='http://localhost:3000/'
               clientID='7c15d9c165cc44cca6bbb29f3d5657fe'
-              scopes={[Scopes.userReadPrivate, 'user-read-email']} // pass the scopes you need
+              scopes={['user-read-private', 'user-read-email', 'user-read-recently-played']}  // pass the scopes you need
               btnClassName='btn btn-success btn-block'
               btnContent='Zaloguj przez Spotify'
           />
+          {recentTrack && <p>Ostatnio słuchany utwór: {recentTrack}</p>}
           <input type="file" onChange={handleFileUpload}/>
           <h1>Interaktywny Kalendarz z Emotikonami</h1>
           <div className="calendar-header">

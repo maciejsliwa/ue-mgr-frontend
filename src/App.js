@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format, addMonths, subMonths } from 'date-fns';
 import { Button, ThemeProvider, createTheme } from '@mui/material';
-import { SpotifyAuth, Scopes} from 'react-spotify-auth';
+import { SpotifyAuth} from 'react-spotify-auth';
 import axios from 'axios';
 import './App.css';
 
@@ -32,7 +32,7 @@ const darkTheme = createTheme({
 const App = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarData, setCalendarData] = useState([]);
-  const [dateRange, setDateRange] = useState({ min: '', max: '' });
+  const [dateRange, setDateRange] = useState({min: '', max: ''});
   const [token, setToken] = useState(null);
   const [recentTrack, setRecentTrack] = useState(null);
 
@@ -44,19 +44,40 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (token) {
-      // Przekazanie tokena do serwera FastAPI
-      axios.post('http://localhost:8000/spt/last', { token })
-          .then(res => {
-            if (res.recently_played) {
-              setRecentTrack(res.recently_played);
+    const fetchRecentlyPlayed = async () => {
+      if (token) {
+        try {
+          const response = await axios.get('http://127.0.0.1:8000/getLast', {
+            headers: {
+              Authorization: `Bearer ${token}`
             }
-          })
-          .catch(err => console.error(err));
+          });
+          setRecentTrack(response.data.recently_played);
+        } catch (error) {
+          console.error('Error fetching recently played', error);
+        }
+      }
     }
-  }, [token]);
+
+    fetchRecentlyPlayed();
+  }, [recentTrack, token]);
 
   useEffect(() => {
+    const fetchDateRange = async () => {
+      if (token) {
+        try {
+          const response = await axios.get('http://127.0.0.1:8000/getRange', {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          setDateRange(response.data);
+        } catch (error) {
+          console.error('Error fetching date range', error);
+        }
+      }
+    };
+
     const generateCalendarData = () => {
       const daysInMonth = new Date(
           currentMonth.getFullYear(),
@@ -68,7 +89,11 @@ const App = () => {
       const endDate = new Date(dateRange.max);
 
       const data = Array.from({ length: daysInMonth }, (_, index) => {
-        const currentDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), index + 1);
+        const currentDate = new Date(
+            currentMonth.getFullYear(),
+            currentMonth.getMonth(),
+            index + 1
+        );
         const isVisible = currentDate >= startDate && currentDate <= endDate;
         return {
           number: index + 1,
@@ -81,8 +106,10 @@ const App = () => {
       setCalendarData(data);
     };
 
+    fetchDateRange();
     generateCalendarData();
-  }, [currentMonth, dateRange]);
+  }, [currentMonth, dateRange.max, dateRange.min, token]);
+
 
   const handleNextMonth = () => {
     setCurrentMonth(addMonths(currentMonth, 1));
@@ -102,14 +129,9 @@ const App = () => {
         method: 'POST',
         body: formData,
       });
-      const data = await response.json();
-      setDateRange(data);
-
-      if (!response.ok) {
-        throw new Error('Error uploading file');
-      }
-
-      alert('File uploaded successfully');
+      if (response.ok) {
+        alert('File uploaded successfully');
+      } else alert('Error uploading file');
     } catch (error) {
       console.error('Error:', error);
       alert('Error uploading file');
@@ -122,9 +144,12 @@ const App = () => {
           <SpotifyAuth
               redirectUri='http://localhost:3000/'
               clientID='7c15d9c165cc44cca6bbb29f3d5657fe'
-              scopes={['user-read-private', 'user-read-email', 'user-read-recently-played']}  // pass the scopes you need
+              scopes={['user-read-private', 'user-read-email', 'user-read-recently-played']}
               btnClassName='btn btn-success btn-block'
               btnContent='Zaloguj przez Spotify'
+              onAccessToken={token => {
+                setToken(token);
+              }}
           />
           {recentTrack && <p>Ostatnio słuchany utwór: {recentTrack}</p>}
           <input type="file" onChange={handleFileUpload}/>

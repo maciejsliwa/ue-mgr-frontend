@@ -1,27 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { format, addMonths, subMonths } from 'date-fns';
+import {format, addMonths, subMonths, formatISO, startOfMonth} from 'date-fns';
 import { Button, ThemeProvider, createTheme } from '@mui/material';
 import { SpotifyAuth} from 'react-spotify-auth';
 import axios from 'axios';
 import './App.css';
 
-const generateEmoticons = () => {
-  const emoticons = ['😊', '☹️'];
-  return emoticons[Math.floor(Math.random() * emoticons.length)];
+const getEmoticon = (sentiment) => {
+  switch (sentiment) {
+    case 'positive':
+      return '😊';
+    case 'negative':
+      return '☹️';
+    case 'neutral':
+      return '😐';
+    case 'mixed':
+      return '🤯';
+    default:
+      return null;
+  }
 };
 
-const Calendar = ({ days }) => {
-  return (
-      <div className="calendar">
-        {days.map((day, index) => (
-            <div key={index} className={`day ${day.isVisible ? '' : 'inactive'}`}>
-              <div className="day-number">{day.number}</div>
-              <div className="emoticon">{day.emoticon}</div>
-            </div>
-        ))}
-      </div>
-  );
-};
+const Day = ({ day, onClick }) => (
+    <div onClick={() => onClick(day.date)} key={day.number} className={`day ${day.isVisible ? '' : 'inactive'}`}>
+      <div className="day-number">{day.number}</div>
+      <div className="emoticon">{day.emoticon}</div>
+    </div>
+);
+
+const Calendar = ({ days, onDayClick }) => (
+    <div className="calendar">
+      {days.map((day) => <Day key={day.number} day={day} onClick={onDayClick} />)}
+    </div>
+);
 
 const darkTheme = createTheme({
   palette: {
@@ -35,6 +45,31 @@ const App = () => {
   const [dateRange, setDateRange] = useState({min: '', max: ''});
   const [token, setToken] = useState(null);
   const [recentTrack, setRecentTrack] = useState(null);
+  const [sentiments, setSentiments] = useState({});
+
+  useEffect(() => {
+    const fetchSentiments = async () => {
+      if (token) {
+        try {
+          const response = await axios.post(
+              `http://127.0.0.1:8000/getSentimentByMonth/?date=${encodeURIComponent(formatISO(startOfMonth(currentMonth)))}`,
+              {},
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`
+                }
+              }
+          );
+          setSentiments(response.data);
+        } catch (error) {
+          console.error('Error fetching sentiments', error);
+        }
+      }
+    };
+
+    fetchSentiments();
+  }, [currentMonth, token]);
+
 
   useEffect(() => {
     const spotifyToken = localStorage.getItem('spotifyAuthToken');
@@ -95,11 +130,12 @@ const App = () => {
             index + 1
         );
         const isVisible = currentDate >= startDate && currentDate <= endDate;
+        const sentiment = sentiments[formatISO(currentDate)];
         return {
           number: index + 1,
           date: currentDate,
           isVisible,
-          emoticon: isVisible ? generateEmoticons() : null,
+          emoticon: isVisible ? getEmoticon(sentiment) : null,
         };
       });
 
@@ -108,7 +144,7 @@ const App = () => {
 
     fetchDateRange();
     generateCalendarData();
-  }, [currentMonth, dateRange.max, dateRange.min, token]);
+  }, [currentMonth, dateRange.max, dateRange.min, sentiments, token]);
 
 
   const handleNextMonth = () => {
@@ -138,12 +174,27 @@ const App = () => {
     }
   };
 
+  const handleDayClick = async (date) => {
+    if (token) {
+      try {
+        const response = await axios.get(`http://127.0.0.1:8000/getPlaylistByDay/${formatISO(date)}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        console.log(response.data);
+      } catch (error) {
+        console.error('Error fetching playlist by day', error);
+      }
+    }
+  };
+
   return (
       <ThemeProvider theme={darkTheme}>
         <div className="App">
           <SpotifyAuth
               redirectUri='http://localhost:3000/'
-              clientID='7c15d9c165cc44cca6bbb29f3d5657fe'
+              clientID={process.env.REACT_APP_SPOTIFY_CLIENT_ID}
               scopes={['user-read-private', 'user-read-email', 'user-read-recently-played']}
               btnClassName='btn btn-success btn-block'
               btnContent='Zaloguj przez Spotify'
@@ -163,7 +214,7 @@ const App = () => {
               Następny Miesiąc &gt;
             </Button>
           </div>
-          <Calendar days={calendarData}/>
+          <Calendar days={calendarData} onDayClick={handleDayClick} />
         </div>
       </ThemeProvider>
   );

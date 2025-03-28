@@ -6,6 +6,10 @@ import axios from 'axios';
 import './App.css';
 
 
+const spotifyScopes = ['user-read-private', 'user-read-email', 'user-read-recently-played',
+    'playlist-modify-public', 'playlist-modify-private', 'playlist-read-private', 'playlist-read-collaborative',
+    'streaming'];
+
 // Demo data
 const demoData = {
     sentiments: ['positive', 'negative', 'neutral'],
@@ -277,7 +281,7 @@ const App = () => {
                     <SpotifyAuth
                         redirectUri='http://localhost:3000/'
                         clientID={process.env.REACT_APP_SPOTIFY_CLIENT_ID}
-                        scopes={['user-read-private', 'user-read-email', 'user-read-recently-played', 'playlist-modify-public', 'playlist-modify-private', 'playlist-read-private', 'playlist-read-collaborative']}
+                        scopes={spotifyScopes}
                         btnClassName='btn btn-success btn-block'
                         btnContent='Zaloguj przez Spotify'
                         onAccessToken={token => {
